@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debug-agent
+  labels:
+    app: debug-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debug-agent
+  template:
+    metadata:
+      labels:
+        app: debug-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "debug-agent"
+        dapr.io/app-port: "8000"
+    spec:
+      containers:
+        - name: debug-agent
+          image: learnflow/debug-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: api-key
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: concepts-agent
+  labels:
+    app: concepts-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: concepts-agent
+  template:
+    metadata:
+      labels:
+        app: concepts-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "concepts-agent"
+        dapr.io/app-port: "8000"
+    spec:
+      containers:
+        - name: concepts-agent
+          image: learnflow/concepts-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: api-key
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

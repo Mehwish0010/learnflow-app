@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #ededed;
+  --background: #0a0a0a;
+  --primary: #DC2626;
+  --accent: #EF4444;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DC2626;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #EF4444;
+}
+
+/* Animated gradient background */
+.gradient-bg {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0000 25%, #0a0a0a 50%, #1a0505 75%, #0a0a0a 100%);
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Red glow input focus */
+.input-glow:focus {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4);
+  border-color: #DC2626;
+}
+
+/* GSAP utility classes */
+.gsap-fade-target {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.gsap-slide-left {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.gsap-slide-right {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* Thinking pulse animation */
+.thinking-pulse {
+  animation: thinking 1.5s ease-in-out infinite;
+}
+
+@keyframes thinking {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Red accent border glow */
+.border-glow {
+  box-shadow: 0 1px 15px rgba(220, 38, 38, 0.15);
+}

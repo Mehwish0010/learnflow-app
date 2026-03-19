@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-review-agent
+  labels:
+    app: code-review-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-review-agent
+  template:
+    metadata:
+      labels:
+        app: code-review-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "code-review-agent"
+        dapr.io/app-port: "8000"
+    spec:
+      containers:
+        - name: code-review-agent
+          image: learnflow/code-review-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: api-key
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

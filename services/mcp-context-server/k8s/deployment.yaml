@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-context-server
+  labels:
+    app: mcp-context-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-context-server
+  template:
+    metadata:
+      labels:
+        app: mcp-context-server
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "mcp-context-server"
+        dapr.io/app-port: "8001"
+    spec:
+      containers:
+        - name: mcp-context-server
+          image: learnflow/mcp-context-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10

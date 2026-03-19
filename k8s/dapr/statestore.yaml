@@ -1,0 +1,11 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: learnflow-statestore
+  namespace: default
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+    - name: connectionString
+      value: "host=postgresql.postgres.svc.cluster.local user=learnflow password=learnflow-secret dbname=learnflow sslmode=disable"

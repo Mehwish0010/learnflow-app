@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progress-agent
+  labels:
+    app: progress-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: progress-agent
+  template:
+    metadata:
+      labels:
+        app: progress-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "progress-agent"
+        dapr.io/app-port: "8000"
+    spec:
+      containers:
+        - name: progress-agent
+          image: learnflow/progress-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: api-key
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,116 @@
+services:
+  # Infrastructure
+  kafka:
+    image: apache/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_NODE_ID=0
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: learnflow
+      POSTGRES_USER: learnflow
+      POSTGRES_PASSWORD: learnflow-secret
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # Backend Services
+  triage-agent:
+    build: ./services/triage-agent
+    ports:
+      - "8010:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  concepts-agent:
+    build: ./services/concepts-agent
+    ports:
+      - "8011:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  code-review-agent:
+    build: ./services/code-review-agent
+    ports:
+      - "8012:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  debug-agent:
+    build: ./services/debug-agent
+    ports:
+      - "8013:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  exercise-agent:
+    build: ./services/exercise-agent
+    ports:
+      - "8014:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  progress-agent:
+    build: ./services/progress-agent
+    ports:
+      - "8015:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DAPR_HTTP_PORT=3500
+    depends_on:
+      - kafka
+      - postgres
+
+  mcp-context-server:
+    build: ./services/mcp-context-server
+    ports:
+      - "8001:8001"
+    depends_on:
+      - kafka
+      - postgres
+
+  # Frontend
+  frontend:
+    build: ./services/frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8010
+    depends_on:
+      - triage-agent
+
+volumes:
+  kafka_data:
+  pg_data:
