@@ -1,16 +1,98 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: AppProject
 metadata:
   name: learnflow
   namespace: argocd
 spec:
-  project: default
+  description: LearnFlow AI Learning Platform
+  sourceRepos:
+    - "https://github.com/Mehwish0010/learnflow-app.git"
+  destinations:
+    - namespace: default
+      server: https://kubernetes.default.svc
+    - namespace: kong
+      server: https://kubernetes.default.svc
+    - namespace: dapr-system
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: learnflow-infra
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: learnflow
   source:
-    repoURL: https://github.com/YOUR_USERNAME/learnflow-app.git
+    repoURL: https://github.com/Mehwish0010/learnflow-app.git
     targetRevision: main
-    path: k8s
-    directory:
-      recurse: true
+    path: k8s/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: learnflow-kong
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: learnflow
+  source:
+    repoURL: https://github.com/Mehwish0010/learnflow-app.git
+    targetRevision: main
+    path: k8s/kong
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kong
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: learnflow-services
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd-image-updater.argoproj.io/image-list: >-
+      triage=ghcr.io/mehwish0010/learnflow/triage-agent,
+      concepts=ghcr.io/mehwish0010/learnflow/concepts-agent,
+      codereview=ghcr.io/mehwish0010/learnflow/code-review-agent,
+      debug=ghcr.io/mehwish0010/learnflow/debug-agent,
+      exercise=ghcr.io/mehwish0010/learnflow/exercise-agent,
+      progress=ghcr.io/mehwish0010/learnflow/progress-agent,
+      mcp=ghcr.io/mehwish0010/learnflow/mcp-context-server,
+      frontend=ghcr.io/mehwish0010/learnflow/frontend
+    argocd-image-updater.argoproj.io/write-back-method: git
+spec:
+  project: learnflow
+  source:
+    repoURL: https://github.com/Mehwish0010/learnflow-app.git
+    targetRevision: main
+    path: k8s/dapr
   destination:
     server: https://kubernetes.default.svc
     namespace: default

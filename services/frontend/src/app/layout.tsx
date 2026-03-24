@@ -1,7 +1,7 @@
 "use client";
 
 import "./globals.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
 export default function RootLayout({
@@ -11,8 +11,14 @@ export default function RootLayout({
 }) {
   const logoRef = useRef<HTMLAnchorElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
+    const stored = localStorage.getItem("learnflow_user");
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+
     gsap.fromTo(
       logoRef.current,
       { x: -30, opacity: 0 },
@@ -27,6 +33,12 @@ export default function RootLayout({
       );
     }
   }, []);
+
+  function logout() {
+    localStorage.removeItem("learnflow_user");
+    setUser(null);
+    window.location.href = "/login";
+  }
 
   return (
     <html lang="en">
@@ -43,7 +55,7 @@ export default function RootLayout({
           >
             LearnFlow
           </a>
-          <div ref={linksRef} className="flex gap-6 text-sm">
+          <div ref={linksRef} className="flex gap-6 text-sm items-center">
             {[
               { href: "/dashboard", label: "Dashboard" },
               { href: "/chat", label: "Chat" },
@@ -60,6 +72,26 @@ export default function RootLayout({
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
               </a>
             ))}
+            {user ? (
+              <>
+                <span className="text-gray-400 border-l border-gray-700 pl-4 ml-2">
+                  {user.name}
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-primary hover:text-accent transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <a
+                href="/login"
+                className="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-accent transition-all duration-300 text-sm font-medium ml-2"
+              >
+                Login
+              </a>
+            )}
           </div>
         </nav>
         <main>{children}</main>

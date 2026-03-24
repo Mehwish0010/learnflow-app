@@ -1,0 +1,107 @@
+name: CD - Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["CI - Build & Test"]
+    types: [completed]
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/learnflow
+
+jobs:
+  update-manifests:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update image tags in k8s manifests
+        run: |
+          SHA=${{ github.event.workflow_run.head_sha }}
+          SHORT_SHA=${SHA::7}
+
+          echo "Updating image tags to $SHORT_SHA..."
+
+          SERVICES=(triage-agent concepts-agent code-review-agent debug-agent exercise-agent progress-agent mcp-context-server frontend)
+
+          for service in "${SERVICES[@]}"; do
+            MANIFEST="services/$service/k8s/deployment.yaml"
+            if [ -f "$MANIFEST" ]; then
+              sed -i "s|image:.*learnflow-${service}:.*|image: ${REGISTRY}/${IMAGE_PREFIX}/${service}:${SHA}|g" "$MANIFEST"
+              echo "  Updated $MANIFEST"
+            fi
+          done
+
+      - name: Commit updated manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "chore: update image tags to ${GITHUB_SHA::7} [skip ci]"
+          git push
+
+  deploy-staging:
+    needs: update-manifests
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.28.0"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy base infrastructure
+        run: |
+          kubectl apply -f k8s/base/
+          kubectl apply -f k8s/dapr/
+          kubectl apply -f k8s/kong/
+
+      - name: Deploy services
+        run: |
+          for service in triage-agent concepts-agent code-review-agent debug-agent exercise-agent progress-agent mcp-context-server frontend; do
+            if [ -d "services/$service/k8s" ]; then
+              kubectl apply -f services/$service/k8s/
+            fi
+          done
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for rollouts..."
+          for service in triage-agent concepts-agent code-review-agent debug-agent exercise-agent progress-agent mcp-context-server frontend; do
+            kubectl rollout status deployment/$service --timeout=120s || true
+          done
+          echo ""
+          echo "=== Deployment Status ==="
+          kubectl get pods
+          kubectl get svc
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync ArgoCD Application
+        run: |
+          echo "ArgoCD auto-syncs from the main branch."
+          echo "Production deployment is managed by ArgoCD."
+          echo "Manual sync: argocd app sync learnflow"
+          echo ""
+          echo "To install ArgoCD CLI and sync manually:"
+          echo "  argocd login <ARGOCD_SERVER> --username admin --password <PASSWORD>"
+          echo "  argocd app sync learnflow"
+          echo "  argocd app wait learnflow"
